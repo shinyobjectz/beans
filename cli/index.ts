@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.3.1";
+const VERSION = "2.3.2";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -385,39 +385,29 @@ async function cmdDoctor(args: string[]) {
     }
   }
   
-  // Check beads database (now in .beans, created by bd init)
+  // Check beads database (supports both .beans and legacy .beads locations)
   const beansDir = join(cwd, ".beans");
-  const hasBeadsDb = existsSync(join(beansDir, "beads.db")) || existsSync(join(beansDir, "issues.jsonl"));
+  const legacyBeadsDir = join(cwd, ".beads");
   
-  if (hasBeadsDb) {
-    success(".beans/beads.db (issue tracker)");
-    
-    // Run bd doctor if --fix
-    if (fix) {
-      log(`\n${c.bold}Running bd doctor --fix...${c.reset}`);
-      try {
-        const result = await $`bd doctor --fix`.nothrow();
-        if (result.exitCode !== 0) {
-          warn("bd doctor reported issues (see output above)");
-        } else {
-          fixed++;
-        }
-      } catch {
-        warn("bd doctor failed");
-      }
-    }
+  const hasBeadsInBeans = existsSync(join(beansDir, "beads.db")) || existsSync(join(beansDir, "issues.jsonl"));
+  const hasLegacyBeads = existsSync(join(legacyBeadsDir, "beads.db")) || existsSync(join(legacyBeadsDir, "issues.jsonl"));
+  
+  if (hasBeadsInBeans) {
+    success(".beans/ (issue tracker)");
+  } else if (hasLegacyBeads) {
+    success(".beads/ (issue tracker - legacy location)");
   } else {
     if (fix) {
       info("Initializing beads (bd init)...");
       try {
         await $`bd init`.nothrow();
-        success("beads initialized in .beans/");
+        success("beads initialized");
         fixed++;
       } catch {
         warn("bd init failed - run manually");
       }
     } else {
-      warn("beads not initialized (run 'beans doctor --fix' or 'bd init')");
+      warn("Issue tracker not initialized (run 'beans doctor --fix' or 'bd init')");
     }
   }
   
