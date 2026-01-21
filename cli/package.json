@@ -1,19 +1,46 @@
 {
-  "name": "@beans/cli",
+  "name": "@morebeans/cli",
   "version": "2.0.0",
-  "description": "CLI for setting up and configuring BEANS",
+  "description": "BEANS CLI - Setup and configure autonomous development for Claude Code",
   "type": "module",
+  "main": "index.ts",
   "bin": {
     "beans": "./index.ts"
   },
   "scripts": {
     "start": "bun run index.ts"
   },
-  "keywords": ["beans", "claude-code", "cli", "setup"],
+  "files": [
+    "index.ts",
+    "package.json"
+  ],
+  "keywords": [
+    "beans",
+    "claude-code",
+    "claude",
+    "ai",
+    "autonomous",
+    "development",
+    "beads",
+    "ralph",
+    "cli"
+  ],
   "author": "Project.Social",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shinyobjectz/beans.git"
+    "url": "https://github.com/shinyobjectz/beans.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/shinyobjectz/beans#readme",
+  "bugs": {
+    "url": "https://github.com/shinyobjectz/beans/issues"
+  },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

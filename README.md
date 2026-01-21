@@ -62,11 +62,11 @@ This single command:
 ### Installation
 
 ```bash
-# Clone BEANS
-git clone https://github.com/shinyobjectz/beans.git ~/.beans
+# Install CLI from npm
+npm install -g @morebeans/cli
 
-# Link CLI globally
-cd ~/.beans/cli && bun link
+# Or with bun
+bun install -g @morebeans/cli
 
 # Initialize in your project
 cd /your/project
