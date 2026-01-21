@@ -11,12 +11,36 @@ Single command for the entire development lifecycle. **Beads is the single sourc
 ## Usage
 
 ```bash
-/beans                              # List ready issues or continue current
+/beans                              # Auto-resume current or list ready issues
 /beans "Add OAuth2 login"           # Full flow - all docs stored in beads
 /beans "Add OAuth2 login" --quick   # Skip reviews, auto-execute
 /beans issue-abc123                 # Continue specific issue
 /beans status                       # Show current progress
 ```
+
+## Context Continuity (AUTO-MANAGED)
+
+<mandatory>
+**ALWAYS DO THIS FIRST** - Check for and resume existing work:
+
+```bash
+# Step 0: Auto-resume check (ALWAYS RUN FIRST)
+if [ -f .beans/.current ]; then
+  ISSUE_ID=$(cat .beans/.current)
+  echo "📍 Resuming: $ISSUE_ID"
+  bd show "$ISSUE_ID"
+  bd comments "$ISSUE_ID" --limit 2  # See where we left off
+fi
+```
+
+**During work**: After each phase/task, save progress:
+```bash
+bd comment "$ISSUE_ID" "✓ $PHASE complete. Next: $NEXT_STEP"
+```
+
+**The PreCompact hook automatically saves state before context compression.**
+**On next `/beans`, you auto-resume from beads. User does nothing extra.**
+</mandatory>
 
 ## Philosophy: Beads as Single Source of Truth
 
@@ -33,9 +57,11 @@ NO separate specs/ directory. Everything lives in beads.
 
 ## Determine Action
 
+**FIRST**: Run auto-resume check above.
+
 Parse `$ARGUMENTS`:
 
-1. **No args** → `bd ready` to show work, continue current if exists
+1. **No args** → Check `.beans/.current` first, resume if exists, else `bd ready`
 2. **"status"** → Show detailed progress via `bd show`
 3. **Quoted description** → Create issue, start workflow
 4. **Issue ID** → Continue existing issue
@@ -50,8 +76,9 @@ Parse `$ARGUMENTS`:
 ISSUE_ID=$(bd create "$description" -t feature --json | jq -r '.id')
 bd update "$ISSUE_ID" --status in_progress
 
-# Store as current work
-echo "$ISSUE_ID" > .beans-current
+# Store as current work (for auto-resume across context compactions)
+mkdir -p .beans
+echo "$ISSUE_ID" > .beans/.current
 ```
 
 ### Step 2: Research Phase
@@ -242,7 +269,7 @@ git commit -m "feat($ISSUE_ID): $description"
 git push
 
 # Cleanup
-rm .beans-current
+rm -f .beans/.current
 
 echo "🎉 Complete! Issue $ISSUE_ID closed."
 ```
