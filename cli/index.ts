@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.7.0";
+const VERSION = "2.8.0";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -250,6 +250,25 @@ async function cmdInit() {
   if (existsSync(settingsSrc) && !existsSync(settingsDest)) {
     await $`cp ${settingsSrc} ${settingsDest}`.nothrow();
   }
+  
+  // Install hooks (for context continuity)
+  info("Installing hooks...");
+  const hooksDir = join(cwd, ".claude/hooks");
+  const hooksScriptsDir = join(hooksDir, "scripts");
+  mkdirSync(hooksScriptsDir, { recursive: true });
+  
+  const hooksSrc = join(pluginSource, "hooks/hooks.json");
+  const preCompactSrc = join(pluginSource, "hooks/scripts/pre-compact.sh");
+  
+  if (existsSync(hooksSrc)) {
+    await $`cp ${hooksSrc} ${join(hooksDir, "hooks.json")}`.nothrow();
+  }
+  if (existsSync(preCompactSrc)) {
+    await $`cp ${preCompactSrc} ${join(hooksScriptsDir, "pre-compact.sh")}`.nothrow();
+    await $`chmod +x ${join(hooksScriptsDir, "pre-compact.sh")}`.nothrow();
+  }
+  success("Hooks installed (SessionStart, PreCompact, Stop)");
+  
   success("Commands registered (10 BEANS commands + beans-loop)");
   
   // Initialize beads issue tracker (uses .beans directory now)
@@ -682,6 +701,61 @@ Use research_store tool to manually add web/codebase findings.
 `);
 }
 
+async function cmdCheck() {
+  log(`\n${c.bold}${c.blue}🔄 BEANS Update Check${c.reset}\n`);
+  
+  info("Checking npm for latest version...");
+  
+  try {
+    const result = await $`npm view @morebeans/cli version`.text();
+    const latestVersion = result.trim();
+    
+    if (latestVersion === VERSION) {
+      success(`Already on latest version: ${VERSION}`);
+      return;
+    }
+    
+    log(`  Current: ${c.yellow}${VERSION}${c.reset}`);
+    log(`  Latest:  ${c.green}${latestVersion}${c.reset}`);
+    log("");
+    
+    info("Updating BEANS CLI...");
+    
+    // Try bun first, fallback to npm
+    try {
+      await $`bun install -g @morebeans/cli@latest`.quiet();
+      success(`Updated to v${latestVersion} (via bun)`);
+    } catch {
+      try {
+        await $`npm install -g @morebeans/cli@latest`.quiet();
+        success(`Updated to v${latestVersion} (via npm)`);
+      } catch (e) {
+        error(`Failed to update: ${e}`);
+        info("Try manually: bun install -g @morebeans/cli@latest");
+        return;
+      }
+    }
+    
+    // Update global ~/.beans repo
+    const beansHome = join(homedir(), ".beans");
+    if (existsSync(beansHome)) {
+      info("Updating ~/.beans repo...");
+      try {
+        await $`cd ${beansHome} && git pull --ff-only`.quiet();
+        success("~/.beans repo updated");
+      } catch {
+        warn("Could not update ~/.beans - run 'cd ~/.beans && git pull' manually");
+      }
+    }
+    
+    log(`\n${c.green}${c.bold}✅ BEANS updated to v${latestVersion}${c.reset}`);
+    log(`Run ${c.cyan}beans doctor${c.reset} to verify installation.`);
+    
+  } catch (e) {
+    error(`Failed to check for updates: ${e}`);
+  }
+}
+
 async function cmdHelp() {
   log(`
 ${c.bold}${c.blue}🫘 BEANS CLI v${VERSION}${c.reset}
@@ -691,6 +765,7 @@ ${c.bold}Usage:${c.reset}
 
 ${c.bold}Commands:${c.reset}
   ${c.cyan}init${c.reset}              Initialize BEANS in current project
+  ${c.cyan}check${c.reset}             Check for updates and install
   ${c.cyan}config${c.reset}            Configure API keys
   ${c.cyan}doctor${c.reset}            Check installation status
   ${c.cyan}research${c.reset}          Manage research database
@@ -726,6 +801,10 @@ const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case "init":
     await cmdInit();
+    break;
+  case "check":
+  case "update":
+    await cmdCheck();
     break;
   case "config":
     await cmdConfig(args);
