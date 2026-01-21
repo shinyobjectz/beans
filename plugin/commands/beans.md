@@ -1,323 +1,307 @@
 ---
-description: BEANS - Autonomous development with automatic beads issue management
-argument-hint: ["description" | issue-id | status | --quick | --phase <name>]
+description: BEANS - Autonomous development with beads as the single source of truth
+argument-hint: ["description" | issue-id | status | --quick]
 allowed-tools: [Read, Write, Edit, Task, Bash, AskUserQuestion]
 ---
 
 # /beans - Autonomous Development
 
-Single command for the entire development lifecycle. **Automatically manages beads issues.**
+Single command for the entire development lifecycle. **Beads is the single source of truth for all project management.**
 
 ## Usage
 
 ```bash
 /beans                              # List ready issues or continue current
-/beans "Add OAuth2 login"           # Full flow with auto beads management
-/beans "Add OAuth2 login" --quick   # Skip reviews, auto-execute all
+/beans "Add OAuth2 login"           # Full flow - all docs stored in beads
+/beans "Add OAuth2 login" --quick   # Skip reviews, auto-execute
 /beans issue-abc123                 # Continue specific issue
 /beans status                       # Show current progress
-/beans --phase research             # Jump to specific phase
 ```
 
-## Automatic Beads Management
+## Philosophy: Beads as Single Source of Truth
 
 <mandatory>
-ALL beads issue management happens automatically. You MUST:
-1. Create issue when starting new work
-2. Update status as phases progress
-3. Add comments for significant milestones
-4. Close issue when complete
+ALL project artifacts are stored in beads, NOT separate files:
+- **Research** → Issue comment
+- **Requirements** → Issue description + sub-issues
+- **Design** → Issue comment
+- **Tasks** → Sub-issues with task type
+- **Progress** → Issue comments + status updates
+
+NO separate specs/ directory. Everything lives in beads.
 </mandatory>
 
 ## Determine Action
 
 Parse `$ARGUMENTS`:
 
-1. **No args or "list"** → Show ready issues and current work
-2. **"status"** → Show detailed progress
-3. **Quoted description** → Start new spec (auto-create issue)
-4. **Issue ID pattern** → Continue existing work
-5. **--quick** → Auto-generate all phases, execute immediately
-6. **--phase <name>** → Jump to specific phase
-
-## List / Continue Current
-
-```bash
-# Show ready issues
-bd ready
-
-# Check for current work
-CURRENT=$(cat ./specs/.current-spec 2>/dev/null)
-if [ -n "$CURRENT" ]; then
-  echo "Current: $CURRENT"
-  # Auto-continue current work
-fi
-```
-
-If current spec exists, automatically continue from where it left off.
+1. **No args** → `bd ready` to show work, continue current if exists
+2. **"status"** → Show detailed progress via `bd show`
+3. **Quoted description** → Create issue, start workflow
+4. **Issue ID** → Continue existing issue
+5. **--quick** → Auto-generate everything, execute immediately
 
 ## New Feature (quoted description)
 
 ### Step 1: Create Beads Issue
 
 ```bash
-# Create issue and capture ID
-ISSUE_ID=$(bd create "$description" -t feature --json 2>/dev/null | jq -r '.id // empty')
+# Create the main feature issue
+ISSUE_ID=$(bd create "$description" -t feature --json | jq -r '.id')
+bd update "$ISSUE_ID" --status in_progress
 
-# Fallback if bd fails
-if [ -z "$ISSUE_ID" ]; then
-  ISSUE_ID=$(echo "$description" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | cut -c1-30)
-fi
-
-# Set in progress
-bd update "$ISSUE_ID" --status in_progress 2>/dev/null || true
-
-echo "Created issue: $ISSUE_ID"
+# Store as current work
+echo "$ISSUE_ID" > .beans-current
 ```
 
-### Step 2: Initialize Spec
-
-```bash
-mkdir -p ./specs/$ISSUE_ID
-echo "$ISSUE_ID" > ./specs/.current-spec
-```
-
-Create `.beans-state.json`:
-```json
-{
-  "issueId": "$ISSUE_ID",
-  "name": "$ISSUE_ID",
-  "description": "$description",
-  "basePath": "./specs/$ISSUE_ID",
-  "phase": "research",
-  "taskIndex": 0,
-  "totalTasks": 0,
-  "taskIteration": 1,
-  "maxTaskIterations": 5
-}
-```
-
-Create `.progress.md`:
-```markdown
-# Progress: $ISSUE_ID
-
-## Goal
-$description
-
-## Beads Issue
-$ISSUE_ID (in_progress)
-
-## Phase
-research
-
-## Completed
-_None yet_
-```
-
-### Step 3: Research Phase
+### Step 2: Research Phase
 
 <mandatory>
-Delegate to research-analyst subagent:
+Delegate to research-analyst, store findings in beads:
 </mandatory>
 
 ```
 Task: Research for implementing: $description
 
-Issue: $ISSUE_ID
-Path: ./specs/$ISSUE_ID/
-
-1. WebSearch for best practices and patterns
-2. Explore codebase for existing patterns
+1. WebSearch for best practices
+2. Explore codebase for patterns
 3. Assess feasibility
-4. Output: ./specs/$ISSUE_ID/research.md
+
+Store your findings - I will add them to the beads issue.
 
 subagent_type: research-analyst
 ```
 
-After research, update beads:
+After research returns, add to beads:
 ```bash
-bd comment "$ISSUE_ID" "Research complete - see specs/$ISSUE_ID/research.md" 2>/dev/null || true
+bd comment "$ISSUE_ID" "## Research Findings
+
+$RESEARCH_CONTENT
+
+---
+Phase: research → requirements"
 ```
 
-Update state: `"phase": "requirements"`
-
-### Step 4: Requirements Phase
+### Step 3: Requirements Phase
 
 <mandatory>
-Delegate to product-manager subagent:
+Delegate to product-manager, create requirement sub-issues:
 </mandatory>
 
 ```
 Task: Generate requirements for: $description
 
-Issue: $ISSUE_ID
-Path: ./specs/$ISSUE_ID/
-Research: [include research.md]
+Research context: [from previous phase]
 
-Output: ./specs/$ISSUE_ID/requirements.md
+Output as structured list:
+- FR-1: [requirement]
+- FR-2: [requirement]
+- NFR-1: [non-functional]
 
 subagent_type: product-manager
 ```
 
-Update state: `"phase": "design"`
+Create sub-issues for each requirement:
+```bash
+# For each requirement
+bd create "FR-1: $requirement_text" -t task --parent "$ISSUE_ID"
+bd create "NFR-1: $nfr_text" -t task --parent "$ISSUE_ID"
+```
 
-### Step 5: Design Phase
+Update main issue description:
+```bash
+bd edit "$ISSUE_ID" --description "## Goal
+$description
+
+## Requirements
+- FR-1: ...
+- FR-2: ...
+
+## Status: requirements complete"
+```
+
+### Step 4: Design Phase
 
 <mandatory>
-Delegate to architect-reviewer subagent:
+Delegate to architect-reviewer, store design in beads:
 </mandatory>
 
 ```
 Task: Create technical design for: $description
 
-Issue: $ISSUE_ID
-Path: ./specs/$ISSUE_ID/
-Requirements: [include requirements.md]
+Requirements: [from beads issue]
 
-Output: ./specs/$ISSUE_ID/design.md
+Output:
+- Architecture overview
+- Key technical decisions
+- File changes needed
 
 subagent_type: architect-reviewer
 ```
 
-Update state: `"phase": "tasks"`
+Add design to beads:
+```bash
+bd comment "$ISSUE_ID" "## Technical Design
 
-### Step 6: Task Planning
+$DESIGN_CONTENT
+
+### Files to Change
+- path/to/file.ts: Add X
+- path/to/other.ts: Modify Y
+
+---
+Phase: design → tasks"
+```
+
+### Step 5: Task Planning
 
 <mandatory>
-Delegate to task-planner subagent:
+Delegate to task-planner, create task sub-issues:
 </mandatory>
 
 ```
-Task: Break down into implementation tasks
+Task: Break into implementation tasks
 
-Issue: $ISSUE_ID
-Path: ./specs/$ISSUE_ID/
-Design: [include design.md]
+Design: [from beads issue]
 
-Output: ./specs/$ISSUE_ID/tasks.md
+Output numbered task list with:
+- Clear description
+- Files to modify
+- Verification command
+- Commit message
 
 subagent_type: task-planner
 ```
 
-Count tasks and update state:
-```json
-{
-  "phase": "execution",
-  "totalTasks": <count>,
-  "taskIndex": 0
-}
-```
-
-Update beads with task count:
+Create sub-issues for each task:
 ```bash
-bd comment "$ISSUE_ID" "Planning complete - $totalTasks tasks generated" 2>/dev/null || true
+# For each task
+TASK_ID=$(bd create "Task 1: $task_description" -t task --parent "$ISSUE_ID" --json | jq -r '.id')
+
+# Add task details as comment
+bd comment "$TASK_ID" "**Do:** $steps
+**Files:** $files
+**Verify:** $verify_command
+**Commit:** $commit_message"
 ```
 
-### Step 7: Execution Loop
+Update parent with task count:
+```bash
+bd comment "$ISSUE_ID" "## Implementation Plan
+
+Created $TASK_COUNT tasks. Starting execution.
+
+Tasks: $(bd list --parent $ISSUE_ID --json | jq -r '.[].id' | tr '\n' ' ')"
+```
+
+### Step 6: Execution Loop
+
+Get tasks and execute each:
+```bash
+# Get incomplete tasks
+TASKS=$(bd list --parent "$ISSUE_ID" --status open --json | jq -r '.[].id')
+```
+
+For each task:
 
 <mandatory>
-For each task, delegate to spec-executor:
+Delegate to spec-executor:
 </mandatory>
 
 ```
-Task: Execute task $taskIndex for $ISSUE_ID
+Task: Execute beads task $TASK_ID
 
-Path: ./specs/$ISSUE_ID/
-Task: [current task from tasks.md]
-
-1. Execute the Do section
-2. Verify with Verify command
-3. Commit with Commit message
-4. Mark [x] in tasks.md
-5. Output TASK_COMPLETE
+Read task details from beads.
+Implement exactly as specified.
+Output TASK_COMPLETE when done.
 
 subagent_type: spec-executor
 ```
 
-After each task:
+After task complete:
 ```bash
-bd comment "$ISSUE_ID" "Completed task $taskIndex/$totalTasks" 2>/dev/null || true
+bd close "$TASK_ID" --reason "Implemented"
+bd comment "$ISSUE_ID" "✓ Completed: $TASK_ID"
 ```
 
-Increment taskIndex and continue until all complete.
+Continue until all tasks closed.
 
-### Step 8: Land (Auto-Close)
+### Step 7: Land (Auto-Complete)
 
 When all tasks complete:
-
 ```bash
 # Final sync
-bd sync 2>/dev/null || true
+bd sync
 
-# Close the issue
-bd close "$ISSUE_ID" --reason "Implemented - all $totalTasks tasks complete" 2>/dev/null || true
+# Close main issue
+bd close "$ISSUE_ID" --reason "All tasks complete"
 
-# Git operations
+# Git
 git add -A
 git commit -m "feat($ISSUE_ID): $description"
 git push
 
-echo "🎉 Complete! Issue $ISSUE_ID closed."
-```
+# Cleanup
+rm .beans-current
 
-Clean up state:
-```bash
-rm ./specs/.current-spec
+echo "🎉 Complete! Issue $ISSUE_ID closed."
 ```
 
 ## Continue Existing Issue
 
-If argument matches issue ID pattern:
-
 ```bash
-# Load issue
+# Load issue and show status
 bd show "$ISSUE_ID"
 
-# Find spec
-if [ -d "./specs/$ISSUE_ID" ]; then
-  echo "$ISSUE_ID" > ./specs/.current-spec
-  # Read state and resume from current phase
-fi
-```
+# Get open tasks
+OPEN_TASKS=$(bd list --parent "$ISSUE_ID" --status open)
 
-Resume from whatever phase is in `.beans-state.json`.
-
-## Quick Mode (--quick)
-
-Skip interactive reviews between phases:
-1. Research → Requirements → Design → Tasks (no stops)
-2. Start execution immediately
-3. Still creates and manages beads issue
-
-## Phase Jump (--phase)
-
-Force jump to specific phase:
-```bash
-/beans --phase design    # Skip to design
-/beans --phase tasks     # Skip to task planning
-/beans --phase execute   # Skip to execution
+# Continue from first open task
 ```
 
 ## Status Display
 
-Show current state:
-```
-Issue: $ISSUE_ID (in_progress)
-Phase: execution
-Tasks: 3/8 complete
-Current: 2.1 Add error handling
-
-Next: Continuing task execution...
+```bash
+bd show "$ISSUE_ID"
+bd list --parent "$ISSUE_ID"
 ```
 
-## Output Summary
-
-After any action, show:
+Shows:
 ```
-Issue: $ISSUE_ID
-Phase: $phase
-Progress: $completed/$total tasks
+Issue: proj-a1b2c3 (in_progress)
+"Add OAuth2 login"
 
-[If more work]: Continuing...
-[If complete]: 🎉 All done! Issue closed.
+Sub-issues:
+  ✓ proj-d4e5f6: FR-1: User login endpoint
+  ✓ proj-g7h8i9: Task 1: Create auth service
+  ○ proj-j0k1l2: Task 2: Add middleware
+  ○ proj-m3n4o5: Task 3: Write tests
+
+Progress: 2/4 tasks
 ```
+
+## Quick Mode
+
+Skip interactive reviews:
+1. Research → Requirements → Design → Tasks (no stops)
+2. Create all beads sub-issues at once
+3. Start execution immediately
+
+## Data Model
+
+```
+Feature Issue (proj-abc123)
+├── Description: Goal + Requirements summary
+├── Comments:
+│   ├── Research findings
+│   ├── Technical design
+│   └── Progress updates
+└── Sub-issues:
+    ├── FR-1: Requirement (task)
+    ├── FR-2: Requirement (task)
+    ├── Task 1: Implementation (task)
+    ├── Task 2: Implementation (task)
+    └── Task 3: Implementation (task)
+```
+
+Everything queryable via `bd list`, `bd show`, `bd search`.

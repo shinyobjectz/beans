@@ -1,78 +1,51 @@
 ---
-description: Generate implementation tasks from design
-argument-hint: [spec-name] [--quick]
-allowed-tools: [Read, Write, Task, Bash]
+description: Create implementation tasks as beads sub-issues
+argument-hint: [issue-id]
+allowed-tools: [Read, Task, Bash]
 ---
 
 # /beans:tasks - Task Planning Phase
 
-Generates implementation tasks, delegating to task-planner subagent.
+Creates task sub-issues in beads.
+
+**Usually called automatically by `/beans`.**
+
+## Get Current Issue
+
+```bash
+ISSUE_ID=$(cat .beans-current 2>/dev/null)
+```
+
+## Execute
 
 <mandatory>
-Delegate ALL task planning to `task-planner` subagent.
+Delegate to task-planner:
 </mandatory>
 
-## Determine Active Spec
-
-Read `./specs/.current-spec` or use argument.
-
-## Validate
-
-Check `./specs/$spec/design.md` and `requirements.md` exist.
-
-## Execute Task Planning
-
 ```
-Task: Create implementation tasks for spec: $spec
+Task: Break $ISSUE_ID into implementation tasks
 
-Path: ./specs/$spec/
-Requirements: [include requirements.md]
-Design: [include design.md]
-
-Create POC-first task breakdown:
-- Phase 1: Make It Work (POC)
-- Phase 2: Refactoring
-- Phase 3: Testing
-- Phase 4: Quality Gates
-
-Each task MUST include:
-- **Do**: Exact steps
-- **Files**: Exact file paths
-- **Done when**: Success criteria
-- **Verify**: Command to verify
-- **Commit**: Commit message
-
-Output: ./specs/$spec/tasks.md
+Output numbered tasks with:
+- Description
+- Files to modify
+- Verify command
+- Commit message
 
 subagent_type: task-planner
 ```
 
-## Update State
-
-Count tasks and update:
-```json
-{
-  "phase": "tasks",
-  "totalTasks": <count>,
-  "awaitingApproval": true
-}
-```
-
-## Sync with Beads
-
-Create beads tasks from tasks.md:
+Create sub-issues:
 ```bash
-# Parse tasks and create sub-issues
-bd list --parent $ISSUE_ID 2>/dev/null || true
+for task in TASKS; do
+  TASK_ID=$(bd create "Task $N: $desc" -t task --parent "$ISSUE_ID" --json | jq -r '.id')
+  bd comment "$TASK_ID" "**Do:** $steps
+**Files:** $files
+**Verify:** $verify
+**Commit:** $commit"
+done
 ```
 
-## Output
-
-```
-Tasks complete for '$spec'.
-Output: ./specs/$spec/tasks.md
-Total tasks: <count>
-
-Next: Run /beans:implement to start execution
-Or: Run /beans:loop for autonomous execution
+Update parent:
+```bash
+bd comment "$ISSUE_ID" "Created $COUNT tasks. Ready to execute."
 ```

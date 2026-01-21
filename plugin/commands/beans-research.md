@@ -1,95 +1,36 @@
 ---
-description: Run research phase for current spec
-argument-hint: [spec-name] [--quick]
-allowed-tools: [Read, Write, Task, Bash]
+description: Run research phase for current issue (stores in beads)
+argument-hint: [issue-id]
+allowed-tools: [Read, Task, Bash]
 ---
 
 # /beans:research - Research Phase
 
-Runs or re-runs the research phase, delegating to research-analyst subagent.
+Runs research and stores findings in beads issue.
 
-<mandatory>
-**YOU ARE A COORDINATOR.** Delegate ALL research to the research-analyst subagent.
-</mandatory>
+**Usually called automatically by `/beans`.**
 
-## Determine Active Spec
+## Get Current Issue
 
-1. If `$ARGUMENTS` contains spec name, use it
-2. Otherwise read `./specs/.current-spec`
-3. If none: error "No active spec. Run /beans:new <name> first."
-
-## Execute Research
-
-<mandatory>
-Spawn research agents in parallel for speed:
-- `research-analyst` for external/web research
-- `Explore` for codebase analysis (fast, read-only)
-</mandatory>
-
-**Task 1 - External Research:**
+```bash
+ISSUE_ID=$(cat .beans-current 2>/dev/null)
+[ -z "$ISSUE_ID" ] && echo "No current issue. Run /beans first." && exit 1
 ```
-Task: Research external best practices for this spec
 
-Spec: $spec
-Path: ./specs/$spec/
+## Execute
 
-1. WebSearch for best practices and patterns
-2. Research relevant libraries/frameworks
-3. Document in ./specs/$spec/.research-external.md
+<mandatory>
+Delegate to research-analyst:
+</mandatory>
+
+```
+Task: Research for issue $ISSUE_ID
 
 subagent_type: research-analyst
 ```
 
-**Task 2 - Codebase Analysis:**
-```
-Task: Analyze codebase patterns for this spec
-
-Spec: $spec
-Path: ./specs/$spec/
-
-1. Find existing patterns using ast-grep
-2. Identify dependencies and constraints
-3. Document in ./specs/$spec/.research-codebase.md
-
-subagent_type: Explore
-```
-
-## Merge Results
-
-After parallel tasks complete, merge into `./specs/$spec/research.md`:
-
-```markdown
-# Research: $spec
-
-## Executive Summary
-[Key findings]
-
-## External Research
-[From .research-external.md]
-
-## Codebase Analysis
-[From .research-codebase.md]
-
-## Recommendations
-[Consolidated recommendations]
-```
-
-Delete temp files after merge.
-
-## Update State
-
-```json
-{
-  "phase": "research",
-  "awaitingApproval": true
-}
-```
-
-## Output
-
-```
-Research complete for '$spec'.
-Output: ./specs/$spec/research.md
-
-Next: Review research.md, then run /beans:requirements
+Store in beads:
+```bash
+bd comment "$ISSUE_ID" "## Research Findings
+$CONTENT"
 ```

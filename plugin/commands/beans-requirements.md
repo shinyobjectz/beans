@@ -1,55 +1,39 @@
 ---
-description: Generate requirements from research
-argument-hint: [spec-name] [--quick]
-allowed-tools: [Read, Write, Task, Bash]
+description: Generate requirements as beads sub-issues
+argument-hint: [issue-id]
+allowed-tools: [Read, Task, Bash]
 ---
 
 # /beans:requirements - Requirements Phase
 
-Generates requirements, delegating to product-manager subagent.
+Creates requirement sub-issues in beads.
+
+**Usually called automatically by `/beans`.**
+
+## Get Current Issue
+
+```bash
+ISSUE_ID=$(cat .beans-current 2>/dev/null)
+[ -z "$ISSUE_ID" ] && echo "No current issue." && exit 1
+```
+
+## Execute
 
 <mandatory>
-Delegate ALL requirements work to `product-manager` subagent.
+Delegate to product-manager:
 </mandatory>
 
-## Determine Active Spec
-
-Read `./specs/.current-spec` or use argument.
-
-## Execute Requirements
-
 ```
-Task: Generate requirements for spec: $spec
+Task: Generate requirements for $ISSUE_ID
 
-Path: ./specs/$spec/
-Research: [include research.md content]
-
-Create:
-1. User stories with acceptance criteria
-2. Functional requirements (FR-*)
-3. Non-functional requirements (NFR-*)
-4. Out-of-scope items
-5. Dependencies
-
-Output: ./specs/$spec/requirements.md
+Output structured requirements:
+- FR-1: ...
+- NFR-1: ...
 
 subagent_type: product-manager
 ```
 
-## Update State
-
-```json
-{
-  "phase": "requirements",
-  "awaitingApproval": true
-}
-```
-
-## Output
-
-```
-Requirements complete for '$spec'.
-Output: ./specs/$spec/requirements.md
-
-Next: Run /beans:design
+Create sub-issues:
+```bash
+bd create "FR-1: $text" -t task --parent "$ISSUE_ID"
 ```

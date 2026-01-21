@@ -1,122 +1,64 @@
 ---
-description: Create new spec with beads issue tracking and start research phase
-argument-hint: <name> [goal] [--quick] [--skip-research]
-allowed-tools: [Bash, Write, Task, AskUserQuestion]
+description: Create new beads issue and start research (use /beans instead for full auto)
+argument-hint: <description> [--quick]
+allowed-tools: [Bash, Task, AskUserQuestion]
 ---
 
-# /beans:new - Create New Spec
+# /beans:new - Create New Issue
 
-Creates a new spec with beads issue tracking and starts the research phase.
+Creates a beads issue and starts the research phase. 
 
-## Parse Arguments
+**Prefer `/beans "description"` for full automation.**
 
-From `$ARGUMENTS`, extract:
-- **name**: Spec name (required, kebab-case)
-- **goal**: Description after name (optional)
-- **--quick**: Skip interactive phases, auto-generate all artifacts
-- **--skip-research**: Skip research, start with requirements
+## Usage
 
-## Capture Goal
+```bash
+/beans:new "Add OAuth2 login"           # Create issue, start research
+/beans:new "Add OAuth2 login" --quick   # Skip reviews
+```
 
-<mandatory>
-If no goal provided in arguments, use AskUserQuestion:
-"What is the goal for this spec? Describe what you want to build."
-</mandatory>
+## Create Issue
 
-## Initialize
+```bash
+ISSUE_ID=$(bd create "$description" -t feature --json | jq -r '.id')
+bd update "$ISSUE_ID" --status in_progress
+echo "$ISSUE_ID" > .beans-current
+echo "Created: $ISSUE_ID"
+```
 
-1. Create beads issue:
-   ```bash
-   ISSUE_ID=$(bd create "$goal" -t feature --json 2>/dev/null | jq -r '.id // empty')
-   if [ -z "$ISSUE_ID" ]; then
-     ISSUE_ID="$name"
-   fi
-   ```
-
-2. Create directory:
-   ```bash
-   mkdir -p ./specs/$name
-   echo "$name" > ./specs/.current-spec
-   ```
-
-3. Create `.beans-state.json`:
-   ```json
-   {
-     "name": "$name",
-     "issueId": "$ISSUE_ID",
-     "basePath": "./specs/$name",
-     "phase": "research",
-     "taskIndex": 0,
-     "totalTasks": 0,
-     "taskIteration": 1,
-     "maxTaskIterations": 5
-   }
-   ```
-
-4. Create `.progress.md`:
-   ```markdown
-   # Progress: $name
-   
-   ## Original Goal
-   $goal
-   
-   ## Beads Issue
-   $ISSUE_ID
-   
-   ## Completed Tasks
-   _No tasks completed yet_
-   
-   ## Current Phase
-   research
-   ```
-
-5. Update beads issue:
-   ```bash
-   bd update $ISSUE_ID --status in_progress 2>/dev/null || true
-   ```
-
-## Execute Research
+## Research Phase
 
 <mandatory>
-Use the Task tool with `subagent_type: research-analyst` to run research.
+Delegate to research-analyst:
 </mandatory>
 
 ```
-Task: Research codebase and external sources for: $goal
+Task: Research for: $description
 
-Spec: $name
-Path: ./specs/$name/
+1. WebSearch for best practices
+2. Explore codebase patterns
+3. Assess feasibility
 
-Use ast-grep and repomix for codebase analysis.
-Use WebSearch for external research.
-Output: ./specs/$name/research.md
+Return findings as markdown.
 
 subagent_type: research-analyst
 ```
 
-## After Research
+Store in beads:
+```bash
+bd comment "$ISSUE_ID" "## Research
 
-Update state:
-```json
-{
-  "phase": "research",
-  "awaitingApproval": true
-}
+$FINDINGS
+
+---
+Next: /beans:requirements or let /beans continue"
 ```
 
 ## Output
 
 ```
-Spec '$name' created at ./specs/$name/
-Beads issue: $ISSUE_ID
+Created issue: $ISSUE_ID
+Research added to issue.
 
-Research phase complete.
-Output: ./specs/$name/research.md
-
-Next: Review research.md, then run /beans:requirements
+Next: Run /beans to continue (auto) or /beans:requirements (manual)
 ```
-
-<mandatory>
-**STOP HERE** unless --quick mode.
-Wait for user to run /beans:requirements.
-</mandatory>
