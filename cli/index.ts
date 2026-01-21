@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.0.2";
+const VERSION = "2.0.3";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -276,14 +276,20 @@ async function cmdDoctor() {
   
   // Check directories
   log(`\n${c.bold}Directories${c.reset}`);
-  const dirs = [".claude/plugins/beans", ".beads", ".claude/agents"];
-  for (const dir of dirs) {
+  const requiredDirs = [".claude/plugins/beans", ".beans", ".claude/agents"];
+  for (const dir of requiredDirs) {
     if (existsSync(join(cwd, dir))) {
       success(dir);
     } else {
       error(dir);
       issues++;
     }
+  }
+  // Optional: .beads (created by bd init)
+  if (existsSync(join(cwd, ".beads"))) {
+    success(".beads (beads issue tracker)");
+  } else {
+    warn(".beads not initialized (run 'bd init' to enable issue tracking)");
   }
   
   // Check config
