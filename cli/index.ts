@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.3.5";
+const VERSION = "2.4.0";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -221,13 +221,26 @@ async function cmdInit() {
   const commandsDir = join(cwd, ".claude/commands");
   mkdirSync(commandsDir, { recursive: true });
   
-  // Register the BEANS commands
-  const beansCommands = ["beans.md", "beans-status.md", "beans-land.md", "beans-agents.md"];
+  // Register ALL BEANS commands (core + phase commands)
+  const beansCommands = [
+    "beans.md", "beans-status.md", "beans-land.md", "beans-agents.md",
+    "beans-new.md", "beans-research.md", "beans-requirements.md",
+    "beans-design.md", "beans-tasks.md", "beans-implement.md"
+  ];
   for (const cmd of beansCommands) {
     const src = join(pluginSource, "commands", cmd);
     if (existsSync(src)) {
       await $`ln -sf ${src} ${join(commandsDir, cmd)}`.nothrow();
     }
+  }
+  
+  // Install beans-loop script to ~/.local/bin
+  const loopScript = join(beansHome, "scripts/beans-loop.sh");
+  const localBin = join(homedir(), ".local/bin");
+  if (existsSync(loopScript)) {
+    mkdirSync(localBin, { recursive: true });
+    await $`cp ${loopScript} ${join(localBin, "beans-loop")}`.nothrow();
+    await $`chmod +x ${join(localBin, "beans-loop")}`.nothrow();
   }
   
   // Copy settings.json if not exists
@@ -236,7 +249,7 @@ async function cmdInit() {
   if (existsSync(settingsSrc) && !existsSync(settingsDest)) {
     await $`cp ${settingsSrc} ${settingsDest}`.nothrow();
   }
-  success("Commands registered (4 BEANS commands)");
+  success("Commands registered (10 BEANS commands + beans-loop)");
   
   // Initialize beads issue tracker (uses .beans directory now)
   info("Initializing issue tracker...");
@@ -270,9 +283,9 @@ async function cmdInit() {
   log(`\n${c.green}${c.bold}✅ BEANS initialized!${c.reset}\n`);
   log("Next steps:");
   log(`  ${c.cyan}beans doctor${c.reset}       # Verify setup`);
-  log(`  ${c.cyan}beans config${c.reset}       # Configure API keys`);
-  log(`  ${c.cyan}/beans${c.reset}             # In Claude Code: start building`);
+  log(`  ${c.cyan}/beans:new${c.reset}         # Create new spec with PRD flow`);
   log(`  ${c.cyan}/beans:agents${c.reset}      # Browse 127+ specialized subagents`);
+  log(`  ${c.cyan}beans-loop${c.reset}         # Autonomous execution (bash)`);
   log("");
 }
 
