@@ -1,10 +1,10 @@
 {
   "name": "beans",
-  "version": "2.1.0",
-  "description": "BEANS: Beads + Ralph + Valyu unified autonomous development",
+  "version": "2.2.0",
+  "description": "BEANS: Validation-first autonomous development with beads",
   "author": "Project.Social",
   "license": "MIT",
-  "keywords": ["beans", "beads", "ralph", "valyu", "autonomous"],
+  "keywords": ["beans", "beads", "ralph", "valyu", "autonomous", "validation"],
   "repository": "https://github.com/shinyobjectz/beans",
   
   "agents": {
@@ -16,13 +16,15 @@
     "code-reviewer": "agents/code-reviewer.md",
     "test-engineer": "agents/test-engineer.md",
     "optimizer": "agents/optimizer.md",
-    "doc-generator": "agents/doc-generator.md"
+    "doc-generator": "agents/doc-generator.md",
+    "validation-gate": "agents/validation-gate.md"
   },
   
   "agentModels": {
     "research-analyst": "claude-sonnet-4-20250514",
     "code-reviewer": "claude-3-5-haiku-latest",
     "test-engineer": "claude-sonnet-4-20250514",
-    "doc-generator": "claude-3-5-haiku-latest"
+    "doc-generator": "claude-3-5-haiku-latest",
+    "validation-gate": "claude-sonnet-4-20250514"
   }
 }

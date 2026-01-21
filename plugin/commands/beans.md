@@ -1,21 +1,33 @@
 ---
-description: BEANS - Autonomous development with beads as the single source of truth
+description: BEANS - Autonomous development with validation-first workflow
 argument-hint: ["description" | issue-id | status | --quick]
 allowed-tools: [Read, Write, Edit, Task, Bash, AskUserQuestion]
 ---
 
 # /beans - Autonomous Development
 
-Single command for the entire development lifecycle. **Beads is the single source of truth for all project management.**
+Single command for the entire development lifecycle. **Beads is the single source of truth. Validation gates closure.**
+
+## Core Principle: Validation-First
+
+<mandatory>
+**Issues are NOT complete until validated.** Every feature must:
+1. Define acceptance criteria (AC) upfront
+2. Specify verification commands
+3. Pass all ACs before closure
+4. Have test evidence stored in beads
+
+Closing based on "tasks done" is FORBIDDEN. Close only after VERIFICATION_PASS.
+</mandatory>
 
 ## Usage
 
 ```bash
 /beans                              # Auto-resume current or list ready issues
-/beans "Add OAuth2 login"           # Full flow - all docs stored in beads
-/beans "Add OAuth2 login" --quick   # Skip reviews, auto-execute
+/beans "Add OAuth2 login"           # Full flow with validation
+/beans "Add OAuth2 login" --quick   # Skip reviews, still validates
 /beans issue-abc123                 # Continue specific issue
-/beans status                       # Show current progress
+/beans status                       # Show progress + validation status
 ```
 
 ## Context Continuity (AUTO-MANAGED)
@@ -84,11 +96,35 @@ research_query({ issue_id: "$ISSUE_ID" })
 ALL project artifacts are stored in beads, NOT separate files:
 - **Research** → Issue comment
 - **Requirements** → Issue description + sub-issues
+- **Acceptance Criteria** → Issue comment (AC-1, AC-2, etc.)
 - **Design** → Issue comment
 - **Tasks** → Sub-issues with task type
+- **Validation** → `.beans/validation/{issue-id}.json` + issue comment
 - **Progress** → Issue comments + status updates
 
 NO separate specs/ directory. Everything lives in beads.
+</mandatory>
+
+## Validation Metadata
+
+<mandatory>
+Each issue tracks validation state in `.beans/validation/{issue-id}.json`:
+
+```json
+{
+  "issue_id": "proj-123",
+  "acceptance_criteria": [
+    {"id": "AC-1", "text": "User can login via Google", "status": "pending", "evidence": null},
+    {"id": "AC-2", "text": "Session persists on refresh", "status": "pending", "evidence": null}
+  ],
+  "verify_command": "bun test src/auth",
+  "e2e_tests": ["tests/e2e/auth.spec.ts"],
+  "validation_runs": [],
+  "final_status": "pending"
+}
+```
+
+Create this file during Step 3.5 (Acceptance Criteria phase).
 </mandatory>
 
 ## Determine Action
@@ -182,6 +218,63 @@ $description
 
 ## Status: requirements complete"
 ```
+
+### Step 3.5: Acceptance Criteria (MANDATORY)
+
+<mandatory>
+Convert requirements into testable acceptance criteria. This is NOT optional.
+</mandatory>
+
+```bash
+# Create validation metadata file
+mkdir -p .beans/validation
+cat > ".beans/validation/$ISSUE_ID.json" << 'EOF'
+{
+  "issue_id": "$ISSUE_ID",
+  "acceptance_criteria": [],
+  "verify_command": "",
+  "e2e_tests": [],
+  "validation_runs": [],
+  "final_status": "pending"
+}
+EOF
+```
+
+For each requirement, create a testable AC:
+```bash
+# AC format: "When [condition], then [expected observable result]"
+
+# Example ACs for OAuth feature:
+# AC-1: When user clicks "Login with Google", then OAuth popup appears
+# AC-2: When OAuth completes successfully, then user is redirected to /dashboard
+# AC-3: When user refreshes page while logged in, then session persists
+# AC-4: When user clicks logout, then all tokens are cleared and redirected to /login
+```
+
+Add ACs to beads AND validation file:
+```bash
+bd comment "$ISSUE_ID" "## Acceptance Criteria
+
+- AC-1: When user clicks 'Login with Google', then OAuth popup appears
+- AC-2: When OAuth completes successfully, then user redirected to /dashboard
+- AC-3: When user refreshes while logged in, then session persists
+- AC-4: When user clicks logout, then tokens cleared and redirected to /login
+
+### Verification
+- **Command:** \`bun test src/auth\`
+- **E2E:** \`tests/e2e/auth.spec.ts\` (to be created)
+
+---
+Phase: acceptance-criteria → design"
+
+# Update validation JSON (use jq or write directly)
+```
+
+<mandatory>
+**Verify command MUST be specified.** If no tests exist yet, specify:
+- `verify_command`: "bun test src/{feature}" (will be created during tasks)
+- `e2e_tests`: ["tests/e2e/{feature}.spec.ts:generate"] (marked for generation)
+</mandatory>
 
 ### Step 4: Design Phase
 
@@ -331,25 +424,125 @@ Fix approach: [based on findings]"
 
 Continue until all tasks closed.
 
-### Step 7: Land (Auto-Complete)
+### Step 6.5: Validation Gate (BLOCKING)
 
-When all tasks complete:
+<mandatory>
+**NEVER close an issue without VERIFICATION_PASS.** This step is NOT skippable, even in --quick mode.
+</mandatory>
+
+After all tasks complete, run the validation gate:
+
+```bash
+# 1. Load validation metadata
+VALIDATION_FILE=".beans/validation/$ISSUE_ID.json"
+VERIFY_CMD=$(jq -r '.verify_command' "$VALIDATION_FILE")
+E2E_TESTS=$(jq -r '.e2e_tests[]' "$VALIDATION_FILE" 2>/dev/null | grep -v ':generate')
+```
+
+**Step 6.5.1: Run verification command**
+```bash
+echo "→ Running verification: $VERIFY_CMD"
+if ! eval "$VERIFY_CMD"; then
+  bd comment "$ISSUE_ID" "❌ Verification FAILED: \`$VERIFY_CMD\`"
+  # Do NOT proceed - fix and retry
+fi
+```
+
+**Step 6.5.2: Run E2E tests (if specified)**
+```bash
+if [ -n "$E2E_TESTS" ]; then
+  echo "→ Running E2E tests..."
+  bunx playwright test $E2E_TESTS
+fi
+```
+
+**Step 6.5.3: Validate acceptance criteria**
+
+<mandatory>
+Delegate to validation-gate agent:
+</mandatory>
+
+```
+Task: Validate all acceptance criteria for $ISSUE_ID
+
+Read .beans/validation/$ISSUE_ID.json for ACs.
+For each AC:
+1. Find evidence in code/tests that it's satisfied
+2. Run targeted verification if needed
+3. Mark status: PASS, FAIL, or SKIP (with reason)
+
+Output VERIFICATION_PASS only if ALL ACs pass.
+Output VERIFICATION_FAIL if ANY AC fails.
+
+subagent_type: validation-gate
+```
+
+**Step 6.5.4: Handle validation result**
+
+On VERIFICATION_FAIL:
+```bash
+# Log failure
+bd comment "$ISSUE_ID" "## ❌ Validation Failed
+
+Failed ACs:
+- AC-2: Session does not persist (cookie not set)
+
+Creating remediation task..."
+
+# Create fix task
+TASK_ID=$(bd create "Fix: AC-2 session persistence" -t task --parent "$ISSUE_ID" --json | jq -r '.id')
+bd comment "$TASK_ID" "**Problem:** Session cookie not being set
+**AC:** When user refreshes while logged in, session persists
+**Verify:** Manual test + bun test src/auth/session.test.ts"
+
+# Return to execution loop - do NOT proceed to Land
+```
+
+On VERIFICATION_PASS:
+```bash
+# Update validation file
+jq '.final_status = "passed" | .validation_runs += [{"timestamp": "'"$(date -Iseconds)"'", "result": "PASS"}]' \
+  "$VALIDATION_FILE" > tmp.json && mv tmp.json "$VALIDATION_FILE"
+
+# Log success
+bd comment "$ISSUE_ID" "## ✅ Validation Passed
+
+All acceptance criteria verified:
+$(jq -r '.acceptance_criteria[] | "- " + .id + ": " + .status' "$VALIDATION_FILE")
+
+Verification command: PASS
+E2E tests: PASS
+
+Proceeding to Land..."
+```
+
+### Step 7: Land (Only After Validation)
+
+<mandatory>
+This step ONLY runs after Step 6.5 returns VERIFICATION_PASS.
+</mandatory>
+
 ```bash
 # Final sync
 bd sync
 
-# Close main issue
-bd close "$ISSUE_ID" --reason "All tasks complete"
+# Close with validation evidence
+bd close "$ISSUE_ID" --reason "Validated: All ACs passed, tests green"
 
 # Git
 git add -A
-git commit -m "feat($ISSUE_ID): $description"
+git commit -m "feat($ISSUE_ID): $description
+
+Validated:
+- All acceptance criteria passed
+- Verification: $VERIFY_CMD ✓
+- E2E: $E2E_TESTS ✓"
 git push
 
 # Cleanup
 rm -f .beans/.current
 
-echo "🎉 Complete! Issue $ISSUE_ID closed."
+echo "🎉 Complete! Issue $ISSUE_ID validated and closed."
 ```
 
 ## Continue Existing Issue
@@ -387,10 +580,12 @@ Progress: 2/4 tasks
 
 ## Quick Mode
 
-Skip interactive reviews:
-1. Research → Requirements → Design → Tasks (no stops)
+Skip interactive reviews, **but validation is STILL MANDATORY**:
+1. Research → Requirements → ACs → Design → Tasks (no stops)
 2. Create all beads sub-issues at once
-3. Start execution immediately
+3. Execute tasks
+4. **Run validation gate** (cannot skip)
+5. Land only after VERIFICATION_PASS
 
 ## Data Model
 
@@ -399,14 +594,37 @@ Feature Issue (proj-abc123)
 ├── Description: Goal + Requirements summary
 ├── Comments:
 │   ├── Research findings
+│   ├── Acceptance criteria (AC-1, AC-2, ...)
 │   ├── Technical design
-│   └── Progress updates
-└── Sub-issues:
-    ├── FR-1: Requirement (task)
-    ├── FR-2: Requirement (task)
-    ├── Task 1: Implementation (task)
-    ├── Task 2: Implementation (task)
-    └── Task 3: Implementation (task)
+│   ├── Progress updates
+│   └── Validation report (final)
+├── Sub-issues:
+│   ├── FR-1: Requirement (task)
+│   ├── FR-2: Requirement (task)
+│   ├── Task 1: Implementation (task)
+│   ├── Task 2: Implementation (task)
+│   ├── Task 3: Write tests (task)
+│   └── Fix: AC-2 session (task) ← Created by validation failure
+└── Validation:
+    └── .beans/validation/proj-abc123.json
+```
+
+Validation file structure:
+```json
+{
+  "issue_id": "proj-abc123",
+  "acceptance_criteria": [
+    {"id": "AC-1", "text": "OAuth popup appears", "status": "passed", "evidence": "auth.test.ts:15"},
+    {"id": "AC-2", "text": "Session persists", "status": "passed", "evidence": "session.test.ts:32"}
+  ],
+  "verify_command": "bun test src/auth",
+  "e2e_tests": ["tests/e2e/auth.spec.ts"],
+  "validation_runs": [
+    {"timestamp": "2024-01-15T10:30:00Z", "result": "FAIL", "failed_acs": ["AC-2"]},
+    {"timestamp": "2024-01-15T11:45:00Z", "result": "PASS"}
+  ],
+  "final_status": "passed"
+}
 ```
 
 Everything queryable via `bd list`, `bd show`, `bd search`.
