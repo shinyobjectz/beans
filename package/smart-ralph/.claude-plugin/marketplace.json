@@ -1,0 +1,33 @@
+{
+  "name": "smart-ralph",
+  "owner": {
+    "name": "tzachbon"
+  },
+  "metadata": {
+    "description": "Spec-driven development with task-by-task execution"
+  },
+  "plugins": [
+    {
+      "name": "ralph-specum",
+      "description": "Spec-driven development with research, requirements, design, tasks, and autonomous execution. Fresh context per task.",
+      "version": "2.5.7",
+      "author": {
+        "name": "tzachbon"
+      },
+      "source": "./plugins/ralph-specum",
+      "category": "development",
+      "tags": ["ralph", "spec-driven", "autonomous", "research", "tasks"]
+    },
+    {
+      "name": "ralph-speckit",
+      "description": "Spec-driven development using GitHub spec-kit methodology. Constitution-first approach with specify, plan, tasks, and implement phases.",
+      "version": "0.1.3",
+      "author": {
+        "name": "tzachbon"
+      },
+      "source": "./plugins/ralph-speckit",
+      "category": "development",
+      "tags": ["ralph", "speckit", "spec-driven", "constitution", "specify", "plan", "tasks"]
+    }
+  ]
+}

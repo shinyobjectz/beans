@@ -1,0 +1,16 @@
+# Test bd init command
+bd init --prefix test
+stdout 'initialized successfully'
+exists .beans/beads.db
+exists .beans/metadata.json
+exists .beans/.gitignore
+grep '^\*\.db$' .beans/.gitignore
+grep '^\*\.db-journal$' .beans/.gitignore
+grep '^\*\.db-wal$' .beans/.gitignore
+grep '^\*\.db-shm$' .beans/.gitignore
+grep '^daemon\.log$' .beans/.gitignore
+grep '^daemon\.pid$' .beans/.gitignore
+grep '^bd\.sock$' .beans/.gitignore
+grep '^!\*\.jsonl$' .beans/.gitignore
+grep '^!metadata\.json$' .beans/.gitignore
+grep '^!config\.json$' .beans/.gitignore
