@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.3.3";
+const VERSION = "2.3.4";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -181,7 +181,6 @@ async function cmdInit() {
   }
   
   // Install essential subagents from catalog
-  const beansHome = join(homedir(), ".beans");
   const subagentsSrc = join(beansHome, "package/subagents/categories");
   const agentsDest = join(cwd, ".claude/agents");
   
