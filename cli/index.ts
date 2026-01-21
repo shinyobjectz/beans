@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.3.0";
+const VERSION = "2.3.1";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -215,12 +215,6 @@ async function cmdInit() {
     if (existsSync(src)) {
       await $`ln -sf ${src} ${join(commandsDir, cmd)}`.nothrow();
     }
-  }
-  
-  // Symlink CLAUDE.md for project docs
-  const claudeMd = join(pluginSource, "CLAUDE.md");
-  if (existsSync(claudeMd)) {
-    await $`ln -sf ${claudeMd} ${join(cwd, ".claude/CLAUDE.md")}`.nothrow();
   }
   
   // Copy settings.json if not exists
