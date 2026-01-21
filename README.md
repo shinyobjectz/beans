@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/image.png" alt="BEANS Banner" width="100%">
+</p>
+
 # BEANS
 
 > **B**eads + r**A**lph + val**U** = BEA**NS**
