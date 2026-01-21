@@ -1,6 +1,6 @@
 {
   "name": "@morebeans/cli",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "BEANS CLI - Setup and configure autonomous development for Claude Code",
   "type": "module",
   "main": "index.ts",
@@ -12,7 +12,8 @@
   },
   "files": [
     "index.ts",
-    "package.json"
+    "package.json",
+    "README.md"
   ],
   "keywords": [
     "beans",
