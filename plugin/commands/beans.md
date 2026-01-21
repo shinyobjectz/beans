@@ -42,6 +42,30 @@ bd comment "$ISSUE_ID" "✓ $PHASE complete. Next: $NEXT_STEP"
 **On next `/beans`, you auto-resume from beads. User does nothing extra.**
 </mandatory>
 
+## When Research Triggers
+
+<mandatory>
+Research happens automatically in these scenarios:
+
+1. **New Feature** (Step 2): WebSearch + codebase analysis for best practices
+2. **Troubleshooting**: When you hit an error or unexpected behavior:
+   ```bash
+   # On error, research before fixing
+   bd comment "$ISSUE_ID" "## Error Encountered
+   $ERROR_MESSAGE"
+   
+   # Research the error
+   WebSearch("$ERROR_TYPE solution $FRAMEWORK")
+   Grep("similar.*error" codebase)
+   
+   # Store findings, then fix
+   ```
+3. **Blocked Tasks**: If a task fails verification, research alternatives
+4. **Unknown Patterns**: If codebase doesn't have existing pattern to follow
+
+**Always store research findings** - use `research_store` or Valyu's `knowledge` tool with `issue_id`.
+</mandatory>
+
 ## Philosophy: Beads as Single Source of Truth
 
 <mandatory>
@@ -249,6 +273,29 @@ After task complete:
 ```bash
 bd close "$TASK_ID" --reason "Implemented"
 bd comment "$ISSUE_ID" "✓ Completed: $TASK_ID"
+```
+
+### On Error/Failure
+
+If a task fails or hits unexpected errors:
+
+```bash
+# 1. Log the error to beads
+bd comment "$ISSUE_ID" "## ❌ Error in $TASK_ID
+\`\`\`
+$ERROR_OUTPUT
+\`\`\`"
+
+# 2. Research the error
+WebSearch("$ERROR_MESSAGE $FRAMEWORK solution")
+
+# 3. Check codebase for similar patterns/fixes
+Grep("$ERROR_TYPE" .)
+
+# 4. Store findings and retry
+bd comment "$TASK_ID" "## Troubleshooting
+Researched: [findings]
+Fix approach: [solution]"
 ```
 
 Continue until all tasks closed.
