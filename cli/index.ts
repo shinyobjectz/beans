@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.1.3";
+const VERSION = "2.2.0";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -348,9 +348,12 @@ async function cmdDoctor(args: string[]) {
     }
   }
   
-  // Check .beads (created by bd init)
-  if (existsSync(join(cwd, ".beads"))) {
-    success(".beads (beads issue tracker)");
+  // Check beads database (now in .beans, created by bd init)
+  const beansDir = join(cwd, ".beans");
+  const hasBeadsDb = existsSync(join(beansDir, "beads.db")) || existsSync(join(beansDir, "issues.jsonl"));
+  
+  if (hasBeadsDb) {
+    success(".beans/beads.db (issue tracker)");
     
     // Run bd doctor if --fix
     if (fix) {
@@ -368,16 +371,16 @@ async function cmdDoctor(args: string[]) {
     }
   } else {
     if (fix) {
-      info("Initializing beads...");
+      info("Initializing beads (bd init)...");
       try {
         await $`bd init`.nothrow();
-        success(".beads initialized");
+        success("beads initialized in .beans/");
         fixed++;
       } catch {
         warn("bd init failed - run manually");
       }
     } else {
-      warn(".beads not initialized (run 'beans doctor --fix' or 'bd init')");
+      warn("beads not initialized (run 'beans doctor --fix' or 'bd init')");
     }
   }
   

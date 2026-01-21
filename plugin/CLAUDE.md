@@ -97,18 +97,19 @@ beans config --github   # Set GitHub token (PRs)
 beans config --show     # Show current config
 ```
 
-## Data Directories
+## Data Directory
+
+Everything lives in `.beans/` (single unified directory):
 
 ```
-.beans/                 # BEANS state
+.beans/                 # All BEANS + Beads data
+├── beads.db            # Issue tracker database
+├── issues.jsonl        # Issue data (git-tracked)
+├── config.yaml         # Beads config
 ├── analysis/           # Code analysis results
 ├── context/            # Codebase snapshots
 ├── cache/              # Cached data
 └── logs/               # Subagent logs
-
-.beads/                 # Beads issue tracker
-├── issues.jsonl        # Issue data
-└── config.yaml         # Beads config
 
 specs/                  # Spec artifacts
 └── <feature>/
