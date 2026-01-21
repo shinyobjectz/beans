@@ -17,10 +17,10 @@ echo ""
 echo "→ Creating directories..."
 mkdir -p "$BEANS_DIR"
 mkdir -p .claude/agents
-mkdir -p .beads/analysis
-mkdir -p .beads/context
-mkdir -p .beads/cache
-mkdir -p .beads/logs
+mkdir -p .beans/analysis
+mkdir -p .beans/context
+mkdir -p .beans/cache
+mkdir -p .beans/logs
 
 # Install Node tools (dev dependencies)
 echo ""

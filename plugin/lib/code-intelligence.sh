@@ -2,9 +2,9 @@
 # code-intelligence.sh - Local code analysis tools for BEANS
 # Usage: source this file or call functions directly
 
-BEANS_CACHE="${BEANS_CACHE:-.beads/cache}"
-BEANS_CONTEXT="${BEANS_CONTEXT:-.beads/context}"
-BEANS_ANALYSIS="${BEANS_ANALYSIS:-.beads/analysis}"
+BEANS_CACHE="${BEANS_CACHE:-.beans/cache}"
+BEANS_CONTEXT="${BEANS_CONTEXT:-.beans/context}"
+BEANS_ANALYSIS="${BEANS_ANALYSIS:-.beans/analysis}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TREE-SITTER: AST parsing

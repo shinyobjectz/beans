@@ -300,11 +300,11 @@ Rebuild: `./scripts/build-unified.sh`
 
 ```bash
 # View subagent activity
-cat .beads/logs/subagent-activity.log
+cat .beans/logs/subagent-activity.log
 
 # View analysis results
-cat .beads/analysis/task-001-*.md
+cat .beans/analysis/task-001-*.md
 
 # Compare snapshots
-diff .beads/context/task-001_iter-1.md .beads/context/task-001_iter-2.md
+diff .beans/context/task-001_iter-1.md .beans/context/task-001_iter-2.md
 ```

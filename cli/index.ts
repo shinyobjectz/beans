@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.0.1";
+const VERSION = "2.0.2";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -101,10 +101,10 @@ async function cmdInit() {
   const dirs = [
     ".claude/plugins",
     ".claude/agents", 
-    ".beads/analysis",
-    ".beads/context",
-    ".beads/cache",
-    ".beads/logs",
+    ".beans/analysis",
+    ".beans/context",
+    ".beans/cache",
+    ".beans/logs",
   ];
   
   for (const dir of dirs) {

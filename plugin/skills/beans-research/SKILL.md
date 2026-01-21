@@ -70,4 +70,4 @@ Results cached in `.beads/research/cache/`:
 
 - `max_price` limits cost per query
 - Cache hits are free
-- Monitor in `.beads/logs/research-api-calls.log`
+- Monitor in `.beans/logs/research-api-calls.log`
