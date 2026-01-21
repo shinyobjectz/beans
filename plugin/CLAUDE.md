@@ -1,7 +1,5 @@
 # BEANS v2.0
 
-> **B**eads + r**A**lph + val**U** = BEA**NS**
-
 Autonomous development plugin for Claude Code.
 
 ## Commands

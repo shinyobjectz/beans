@@ -4,8 +4,6 @@
 
 # BEANS
 
-> **B**eads + r**A**lph + val**U** = BEA**NS**
-
 **Unified autonomous development plugin for Claude Code** combining git-backed issue tracking, spec-driven execution, and code intelligence tools.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
