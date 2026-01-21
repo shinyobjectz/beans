@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-const VERSION = "2.3.2";
+const VERSION = "2.3.3";
 const BEANS_HOME = join(homedir(), ".beans");
 const BEANS_CONFIG = join(BEANS_HOME, "config.json");
 
@@ -112,11 +112,39 @@ async function cmdInit() {
   }
   success("Directories created");
   
-  // Find plugin source
+  // Ensure global ~/.beans repo exists (for subagent catalog)
+  const beansHome = join(homedir(), ".beans");
+  const beansRepoMarker = join(beansHome, "plugin"); // Check if it's a proper repo clone
+  
+  if (!existsSync(beansRepoMarker)) {
+    info("Setting up global BEANS repo (~/.beans)...");
+    try {
+      // Backup config if exists
+      const configBackup = existsSync(join(beansHome, "config.json")) 
+        ? JSON.parse(readFileSync(join(beansHome, "config.json"), "utf-8")) 
+        : null;
+      
+      // Clone fresh (removes any partial state)
+      if (existsSync(beansHome)) {
+        await $`rm -rf ${beansHome}`.quiet();
+      }
+      await $`git clone https://github.com/shinyobjectz/beans.git ${beansHome}`.quiet();
+      
+      // Restore config
+      if (configBackup) {
+        writeFileSync(join(beansHome, "config.json"), JSON.stringify(configBackup, null, 2));
+      }
+      success("BEANS repo cloned to ~/.beans (subagent catalog available)");
+    } catch (e) {
+      warn(`Could not clone global BEANS repo: ${e}`);
+    }
+  }
+  
+  // Find plugin source (prefer local, fallback to global)
   const pluginSources = [
     join(cwd, "submodules/beans/plugin"),
     join(cwd, "plugin"),  // If running from beans repo itself
-    join(homedir(), ".beans/plugin"),
+    join(beansHome, "plugin"),
     join(import.meta.dir, "../plugin"),
   ];
   
@@ -128,30 +156,9 @@ async function cmdInit() {
     }
   }
   
-  // Auto-clone if not found
   if (!pluginSource) {
-    info("BEANS plugin not found locally, cloning from GitHub...");
-    const beansHome = join(homedir(), ".beans");
-    
-    try {
-      if (existsSync(beansHome)) {
-        info("Updating existing ~/.beans...");
-        await $`cd ${beansHome} && git pull`.quiet();
-      } else {
-        await $`git clone https://github.com/shinyobjectz/beans.git ${beansHome}`;
-      }
-      pluginSource = join(beansHome, "plugin");
-      
-      if (!existsSync(pluginSource)) {
-        error("Clone succeeded but plugin directory not found");
-        return;
-      }
-      success("BEANS repo cloned to ~/.beans");
-    } catch (e) {
-      error(`Failed to clone BEANS repo: ${e}`);
-      info("Try manually: git clone https://github.com/shinyobjectz/beans.git ~/.beans");
-      return;
-    }
+    error("BEANS plugin not found. Try: git clone https://github.com/shinyobjectz/beans.git ~/.beans");
+    return;
   }
   
   // Symlink plugin
